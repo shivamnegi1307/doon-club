@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
-import { Home, Calendar, Settings, BookOpen } from 'lucide-react-native';
+import { Home, Calendar, Settings, BookOpen, CreditCard } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
@@ -47,6 +47,15 @@ export default function TabLayout() {
           title: 'Profile',
           tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="pay"
+        options={{
+          title: 'Pay',
+          tabBarIcon: ({ size, color }) => (
+            <CreditCard size={size} color={color} />
           ),
         }}
       />
