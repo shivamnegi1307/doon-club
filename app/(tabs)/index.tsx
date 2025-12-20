@@ -9,9 +9,11 @@ import {
 } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { userData } = useAuth();
 
   return (
     <ScrollView style={styles.container}>
@@ -24,7 +26,7 @@ export default function HomeScreen() {
             }}
             style={styles.avatar}
           />
-          <Text style={styles.userName}>Nitin Dwivedi</Text>
+          <Text style={styles.userName}>{userData?.profile.name || 'User'}</Text>
         </View>
 
         <TouchableOpacity>

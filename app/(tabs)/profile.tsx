@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { logout } = useAuth();
+  const { logout, userData } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
           }}
           style={styles.avatar}
         />
-        <Text style={styles.name}>Nitin Dwivedi</Text>
+        <Text style={styles.name}>{userData?.profile.name || 'User'}</Text>
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => router.push('/personal-info')}>

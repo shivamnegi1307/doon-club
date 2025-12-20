@@ -13,6 +13,26 @@ interface UserData {
   token: string;
 }
 
+interface DetailedProfile {
+  id: number;
+  user_id: number;
+  name: string;
+  anniversary: string | null;
+  category: string | null;
+  relation: string;
+  email: string;
+  mobile: string;
+  gender: string;
+  city: string;
+  pin: string;
+  address: string;
+  status: number;
+  created_at: string;
+  updated_at: string;
+  role: string;
+  dob: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   userData: UserData | null;
@@ -20,6 +40,18 @@ interface AuthContextType {
   logout: () => void;
   verifyDOB: (membershipNo: string, dob: string) => Promise<{ success: boolean; userId?: number; error?: string }>;
   resetPassword: (userId: number, password: string, passwordConfirmation: string) => Promise<{ success: boolean; error?: string }>;
+  getUserProfile: () => Promise<{ success: boolean; data?: DetailedProfile; error?: string }>;
+  updateProfile: (profileData: {
+    dob: string;
+    name: string;
+    email: string;
+    mobile: string;
+    gender: string;
+    pin: string;
+    city: string;
+    address: string;
+    anniversary?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,13 +130,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getUserProfile = async () => {
+    if (!userData?.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await fetch('https://doonclub.in/api/get-user-profile', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status && result.data) {
+          return { success: true, data: result.data };
+        }
+        return { success: false, error: 'Invalid response format' };
+      } else {
+        return { success: false, error: 'Failed to fetch profile' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  };
+
+  const updateProfile = async (profileData: {
+    dob: string;
+    name: string;
+    email: string;
+    mobile: string;
+    gender: string;
+    pin: string;
+    city: string;
+    address: string;
+    anniversary?: string;
+  }) => {
+    if (!userData?.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await fetch('https://doonclub.in/api/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to update profile' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     setUserData(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userData, login, logout, verifyDOB, resetPassword }}>
+    <AuthContext.Provider value={{ isAuthenticated, userData, login, logout, verifyDOB, resetPassword, getUserProfile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
