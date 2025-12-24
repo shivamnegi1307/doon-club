@@ -5,57 +5,90 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { ArrowLeft, MoreVertical } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface Event {
+  id: number;
+  title: string;
+  image: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  price: string;
+  description: string | null;
+  status: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function EventScreen() {
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const events = [
-    {
-      id: 1,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-    {
-      id: 2,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-    {
-      id: 3,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-    {
-      id: 4,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-    {
-      id: 5,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-    {
-      id: 6,
-      title: 'Dehradun Club',
-      date: '12 - 14 Nov 2025',
-      image: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=400',
-      price: '₹1500',
-    },
-  ];
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch('https://doonclub.in/api/get-all-events');
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status && result.data) {
+          setEvents(result.data);
+        } else {
+          setError('Failed to load events');
+        }
+      } else {
+        setError('Failed to fetch events');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const formatPrice = (price: string) => {
+    const priceNum = parseFloat(price);
+    if (priceNum === 0) {
+      return 'Free';
+    }
+    return `₹${priceNum}`;
+  };
+
+  const getImageUrl = (imagePath: string) => {
+    return `https://doonclub.in/storage/${imagePath.replace('public/', '')}`;
+  };
+
+  const filterEvents = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (activeTab === 'upcoming') {
+      return events.filter(event => new Date(event.date) >= today);
+    } else {
+      return events.filter(event => new Date(event.date) < today);
+    }
+  };
+
+  const filteredEvents = filterEvents();
 
   return (
     <View style={styles.container}>
@@ -94,29 +127,51 @@ export default function EventScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.eventsList} showsVerticalScrollIndicator={false}>
-        <View style={styles.grid}>
-          {events.map((event) => (
-            <TouchableOpacity key={event.id} style={styles.eventCard}>
-              <Image
-                source={{ uri: event.image }}
-                style={styles.eventImage}
-              />
-              <View style={styles.eventInfo}>
-                <View style={styles.dateRow}>
-                  <Text style={styles.dateIcon}>📅</Text>
-                  <Text style={styles.dateText}>{event.date}</Text>
-                </View>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDescription}>
-                  Lorem ipsum Lorem ipsum...
-                </Text>
-                <Text style={styles.eventPrice}>{event.price}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0f4c8b" />
+          <Text style={styles.loadingText}>Loading events...</Text>
         </View>
-      </ScrollView>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchEvents}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.eventsList} showsVerticalScrollIndicator={false}>
+          <View style={styles.grid}>
+            {filteredEvents.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No {activeTab} events found
+                </Text>
+              </View>
+            ) : (
+              filteredEvents.map((event) => (
+                <TouchableOpacity key={event.id} style={styles.eventCard}>
+                  <Image
+                    source={{ uri: getImageUrl(event.image) }}
+                    style={styles.eventImage}
+                  />
+                  <View style={styles.eventInfo}>
+                    <View style={styles.dateRow}>
+                      <Text style={styles.dateIcon}>📅</Text>
+                      <Text style={styles.dateText}>{formatDate(event.date)}</Text>
+                    </View>
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <Text style={styles.eventDescription}>
+                      {event.description || 'Event details coming soon...'}
+                    </Text>
+                    <Text style={styles.eventPrice}>{formatPrice(event.price)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -213,5 +268,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#f59e0b',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#0f4c8b',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    width: '100%',
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
   },
 });
