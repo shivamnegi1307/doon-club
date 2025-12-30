@@ -4,67 +4,125 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
-import { ArrowLeft, MoreVertical } from 'lucide-react-native';
-import { useState } from 'react';
+import { MoreVertical } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Transaction {
+  id: number;
+  order_id: string;
+  narration: string;
+  currency: string;
+  payment_method: string;
+  amount: string;
+  paid_at: string;
+}
 
 export default function PayScreen() {
   const [activeTab, setActiveTab] = useState('daily');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { userData } = useAuth();
 
-  const transactions = [
-    {
-      id: 1,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '+400',
-      type: 'credit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-    {
-      id: 2,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '+400',
-      type: 'credit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-    {
-      id: 3,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '-500',
-      type: 'debit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-    {
-      id: 4,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '-500',
-      type: 'debit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-    {
-      id: 5,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '+500',
-      type: 'credit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-    {
-      id: 6,
-      name: 'Arjun Rawat',
-      time: '3:40 pm',
-      amount: '+400',
-      type: 'credit',
-      image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400',
-    },
-  ];
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
-  const getAmountColor = (type: string) => {
-    return type === 'credit' ? '#10b981' : '#ef4444';
+  const fetchTransactions = async () => {
+    if (!userData?.token) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch('https://doonclub.in/api/get-all-payment', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && Array.isArray(result.data)) {
+          setTransactions(result.data);
+        } else {
+          setError('Invalid response format');
+        }
+      } else {
+        setError('Failed to fetch transactions');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const getPaymentMethodLabel = (method: string) => {
+    const methods: { [key: string]: string } = {
+      'CC': 'Credit Card',
+      'DC': 'Debit Card',
+      'UPI': 'UPI',
+      'NB': 'Net Banking',
+      'CASH': 'Cash',
+    };
+    return methods[method] || method;
+  };
+
+  const filterTransactionsByTab = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (activeTab === 'daily') {
+      return transactions.filter((transaction) => {
+        const transactionDate = new Date(transaction.paid_at);
+        transactionDate.setHours(0, 0, 0, 0);
+        return transactionDate.getTime() === today.getTime();
+      });
+    } else {
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+      return transactions.filter((transaction) => {
+        const transactionDate = new Date(transaction.paid_at);
+        return transactionDate >= firstDayOfMonth && transactionDate <= lastDayOfMonth;
+      });
+    }
+  };
+
+  const filteredTransactions = filterTransactionsByTab();
+
+  const calculateTotalBalance = () => {
+    const total = transactions.reduce((sum, transaction) => {
+      return sum + parseFloat(transaction.amount);
+    }, 0);
+    return total.toFixed(2);
   };
 
   return (
@@ -76,75 +134,109 @@ export default function PayScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.cardSection}>
-          <Text style={styles.cardLabel}>Your Card</Text>
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View>
-                <Text style={styles.cardTitle}>Current Balance</Text>
-                <Text style={styles.cardBalance}>₹4,570.80</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0f4c8b" />
+          <Text style={styles.loadingText}>Loading transactions...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchTransactions}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.cardSection}>
+            <Text style={styles.cardLabel}>Total Balance</Text>
+            <View style={styles.card}>
+              <View style={styles.cardContent}>
+                <View>
+                  <Text style={styles.cardTitle}>Current Balance</Text>
+                  <Text style={styles.cardBalance}>₹{calculateTotalBalance()}</Text>
+                </View>
+                <View style={styles.mastercardLogo}>
+                  <Text style={styles.logoText}>₹</Text>
+                </View>
               </View>
-              <View style={styles.mastercardLogo}>
-                <Text style={styles.logoText}>M</Text>
+              <View style={styles.cardDetails}>
+                <Text style={styles.cardInfo}>Total Transactions: {transactions.length}</Text>
               </View>
-            </View>
-            <View style={styles.cardDetails}>
-              <Text style={styles.cardNumber}>5294 2436 4780 9568</Text>
-              <Text style={styles.cardExpiry}>12/26</Text>
             </View>
           </View>
-        </View>
 
-        <View style={styles.tabsSection}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'daily' && styles.activeTab]}
-            onPress={() => setActiveTab('daily')}>
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'daily' && styles.activeTabText,
-              ]}>
-              Daily
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'monthly' && styles.activeTab]}
-            onPress={() => setActiveTab('monthly')}>
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'monthly' && styles.activeTabText,
-              ]}>
-              Monthly
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.transactionsSection}>
-          {transactions.map((transaction) => (
-            <View key={transaction.id} style={styles.transactionItem}>
-              <Image
-                source={{ uri: transaction.image }}
-                style={styles.transactionImage}
-              />
-              <View style={styles.transactionInfo}>
-                <Text style={styles.transactionName}>{transaction.name}</Text>
-                <Text style={styles.transactionTime}>{transaction.time}</Text>
-              </View>
+          <View style={styles.tabsSection}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'daily' && styles.activeTab]}
+              onPress={() => setActiveTab('daily')}>
               <Text
                 style={[
-                  styles.transactionAmount,
-                  { color: getAmountColor(transaction.type) },
+                  styles.tabText,
+                  activeTab === 'daily' && styles.activeTabText,
                 ]}>
-                {transaction.amount}
+                Daily
               </Text>
-            </View>
-          ))}
-        </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'monthly' && styles.activeTab]}
+              onPress={() => setActiveTab('monthly')}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'monthly' && styles.activeTabText,
+                ]}>
+                Monthly
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.spacer} />
-      </ScrollView>
+          <View style={styles.transactionsSection}>
+            {filteredTransactions.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No {activeTab} transactions found
+                </Text>
+              </View>
+            ) : (
+              filteredTransactions.map((transaction) => (
+                <View key={transaction.id} style={styles.transactionItem}>
+                  <View style={styles.transactionIconContainer}>
+                    <Text style={styles.transactionIcon}>💳</Text>
+                  </View>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionOrderId}>
+                      Order: {transaction.order_id}
+                    </Text>
+                    <Text style={styles.transactionNarration}>
+                      {transaction.narration.replace('_', ' ').toUpperCase()}
+                    </Text>
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionMethod}>
+                        {getPaymentMethodLabel(transaction.payment_method)}
+                      </Text>
+                      <Text style={styles.transactionSeparator}>•</Text>
+                      <Text style={styles.transactionDate}>
+                        {formatDate(transaction.paid_at)}
+                      </Text>
+                    </View>
+                    <Text style={styles.transactionTime}>
+                      {formatTime(transaction.paid_at)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text style={styles.transactionAmount}>
+                      {transaction.currency} {transaction.amount}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={styles.spacer} />
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -166,6 +258,41 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#0f4c8b',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -207,33 +334,24 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#ef4444',
+    backgroundColor: '#10b981',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoText: {
-    fontSize: 20,
+    fontSize: 24,
     color: '#fff',
     fontWeight: '700',
   },
   cardDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#374151',
     paddingTop: 16,
   },
-  cardNumber: {
-    fontSize: 14,
+  cardInfo: {
+    fontSize: 13,
     color: '#d1d5db',
     fontWeight: '500',
-    letterSpacing: 2,
-  },
-  cardExpiry: {
-    fontSize: 14,
-    color: '#d1d5db',
-    fontWeight: '600',
   },
   tabsSection: {
     flexDirection: 'row',
@@ -262,36 +380,77 @@ const styles = StyleSheet.create({
   transactionsSection: {
     marginBottom: 20,
   },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+  },
   transactionItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
-  transactionImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  transactionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
-    backgroundColor: '#e5e7eb',
+  },
+  transactionIcon: {
+    fontSize: 20,
   },
   transactionInfo: {
     flex: 1,
+    gap: 4,
   },
-  transactionName: {
-    fontSize: 13,
+  transactionOrderId: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 2,
+  },
+  transactionNarration: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#0f4c8b',
+  },
+  transactionDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  transactionMethod: {
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  transactionSeparator: {
+    fontSize: 11,
+    color: '#d1d5db',
+  },
+  transactionDate: {
+    fontSize: 11,
+    color: '#6b7280',
   },
   transactionTime: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#9ca3af',
   },
+  transactionRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   transactionAmount: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
+    color: '#10b981',
   },
   spacer: {
     height: 20,
