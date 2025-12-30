@@ -6,11 +6,13 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
 
 interface MemberDetails {
   name: string;
@@ -94,26 +96,48 @@ export default function BillScreen() {
     try {
       setPaying(true);
       setError('');
-      const response = await fetch('https://doonclub.in/api/initiate-payment', {
+      const response = await fetch('https://doonclub.in/api/pay-online/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userData.token}`,
         },
         body: JSON.stringify({
-          amount: parseFloat(amount),
-          payment_type: 'membership',
+          amount: amount,
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        router.push({
-          pathname: '/payment-success',
-          params: { order_id: result.data?.order_id || 'PAYMENT_001' },
-        });
+
+        if (result.success && result.payment_url) {
+          const browserResult = await WebBrowser.openBrowserAsync(result.payment_url);
+
+          if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+            Alert.alert('Payment Cancelled', 'You cancelled the payment process.');
+            setPaying(false);
+            return;
+          }
+
+          Alert.alert(
+            'Payment Completed',
+            'Your payment has been processed. Please check your payment history.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  setAmount('');
+                  router.push('/(tabs)/pay');
+                },
+              },
+            ]
+          );
+        } else {
+          setError('Payment URL not received');
+        }
       } else {
-        setError('Payment initiation failed');
+        const errorData = await response.json();
+        setError(errorData.message || 'Payment initiation failed');
       }
     } catch (err) {
       setError('Network error. Please try again.');
