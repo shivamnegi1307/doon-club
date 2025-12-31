@@ -244,7 +244,7 @@ export default function BookingScreen() {
             <TouchableOpacity
               key={booking.id}
               style={styles.bookingCard}
-              onPress={() => router.push('/booking-detail')}>
+              onPress={() => router.push({ pathname: '/booking-detail', params: { roomId: booking.id.toString() } })}>
               <Image
                 source={{ uri: getImageUrl(booking.featured_image) }}
                 style={styles.bookingImage}
