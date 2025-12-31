@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import en from '@/locales/en.json';
 import hi from '@/locales/hi.json';
 import zh from '@/locales/zh.json';
@@ -25,6 +26,21 @@ const translations: Record<LanguageCode, any> = {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('en');
 
+  useEffect(() => {
+    loadLanguagePreference();
+  }, []);
+
+  const loadLanguagePreference = async () => {
+    try {
+      const storedLanguage = await AsyncStorage.getItem('languagePreference');
+      if (storedLanguage && storedLanguage in translations) {
+        setCurrentLanguage(storedLanguage as LanguageCode);
+      }
+    } catch (error) {
+      console.error('Failed to load language preference:', error);
+    }
+  };
+
   const availableLanguages: Array<{ code: LanguageCode; name: string }> = [
     { code: 'en', name: 'English (UK)' },
     { code: 'hi', name: 'Hindi' },
@@ -32,9 +48,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     { code: 'es', name: 'Spanish' },
   ];
 
-  const handleSetLanguage = (language: LanguageCode) => {
+  const handleSetLanguage = async (language: LanguageCode) => {
     if (language in translations) {
       setCurrentLanguage(language);
+      try {
+        await AsyncStorage.setItem('languagePreference', language);
+      } catch (error) {
+        console.error('Failed to save language preference:', error);
+      }
     }
   };
 

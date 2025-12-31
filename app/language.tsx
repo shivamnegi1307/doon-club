@@ -7,25 +7,29 @@ import {
 } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLanguage, LanguageCode } from '@/contexts/LanguageContext';
 
 export default function LanguageScreen() {
   const router = useRouter();
-  const [selectedLanguage, setSelectedLanguage] = useState('English (UK)');
+  const { currentLanguage, setLanguage, availableLanguages } = useLanguage();
 
-  const suggestedLanguages = ['English (UK)', 'English', 'Hindi'];
-  const otherLanguages = ['Chinese', 'Croatian', 'Czech', 'Danish', 'Filipino', 'Finland'];
+  const suggestedLanguages = availableLanguages.filter(
+    (lang) => lang.code === 'en' || lang.code === 'hi'
+  );
+  const otherLanguages = availableLanguages.filter(
+    (lang) => lang.code !== 'en' && lang.code !== 'hi'
+  );
 
-  const renderLanguageItem = (language: string) => {
-    const isSelected = selectedLanguage === language;
+  const renderLanguageItem = (language: { code: LanguageCode; name: string }) => {
+    const isSelected = currentLanguage === language.code;
 
     return (
       <TouchableOpacity
-        key={language}
+        key={language.code}
         style={styles.languageItem}
-        onPress={() => setSelectedLanguage(language)}>
+        onPress={() => setLanguage(language.code)}>
         <Text style={[styles.languageText, isSelected && styles.selectedText]}>
-          {language}
+          {language.name}
         </Text>
         {isSelected && <Check size={20} color="#0f4c8b" />}
       </TouchableOpacity>

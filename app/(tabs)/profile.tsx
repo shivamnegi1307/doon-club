@@ -19,6 +19,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -28,6 +29,10 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     logout();
     setShowLogoutModal(false);
+  };
+
+  const handleHelpAndSupport = async () => {
+    await WebBrowser.openBrowserAsync('https://doonclub.in/contact-us');
   };
 
   return (
@@ -54,7 +59,9 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Setting</Text>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/pay')}>
           <View style={styles.menuLeft}>
             <CreditCard size={20} color="#000" />
             <Text style={styles.menuText}>Your Card</Text>
@@ -92,7 +99,9 @@ export default function ProfileScreen() {
           <ChevronRight size={20} color="#9ca3af" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleHelpAndSupport}>
           <View style={styles.menuLeft}>
             <HelpCircle size={20} color="#000" />
             <Text style={styles.menuText}>Help and Support</Text>

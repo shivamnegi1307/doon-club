@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserProfile {
   name: string;
@@ -35,6 +36,7 @@ interface DetailedProfile {
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isLoading: boolean;
   userData: UserData | null;
   login: (membershipNo: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -58,7 +60,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        setUserData(parsedData);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = async (membershipNo: string, password: string) => {
     try {
@@ -76,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setUserData(data);
         setIsAuthenticated(true);
+        await AsyncStorage.setItem('userData', JSON.stringify(data));
         return { success: true };
       } else {
         return { success: false, error: 'Invalid membership ID or password' };
@@ -193,13 +216,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setIsAuthenticated(false);
     setUserData(null);
+    await AsyncStorage.removeItem('userData');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userData, login, logout, verifyDOB, resetPassword, getUserProfile, updateProfile }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, login, logout, verifyDOB, resetPassword, getUserProfile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

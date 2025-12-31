@@ -49,7 +49,7 @@ export default function BillScreen() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('https://doonclub.in/api/user-profile', {
+      const response = await fetch('https://doonclub.in/api/get-user-profile', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -59,15 +59,15 @@ export default function BillScreen() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.data) {
+        if (result.status && result.data) {
           setMemberDetails({
             name: result.data.name || 'Member',
-            member_id: result.data.member_id || 'N/A',
-            member_type: result.data.member_type || 'Standard',
-            phone: result.data.phone || 'N/A',
+            member_id: userData.membership_no || 'N/A',
+            member_type: result.data.role || 'Standard',
+            phone: result.data.mobile || 'N/A',
             email: result.data.email || 'N/A',
             gender: result.data.gender || 'N/A',
-            pin_code: result.data.pin_code || 'N/A',
+            pin_code: result.data.pin || 'N/A',
             city: result.data.city || 'N/A',
             address: result.data.address || 'N/A',
           });

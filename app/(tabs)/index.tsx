@@ -62,7 +62,9 @@ export default function HomeScreen() {
           <Text style={styles.cardText}>BUZZ</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/(tabs)/pay')}>
           <View style={[styles.iconContainer, { backgroundColor: '#ef4444' }]}>
             <Text style={styles.iconText}>💰</Text>
           </View>
