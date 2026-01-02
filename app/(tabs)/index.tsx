@@ -55,11 +55,13 @@ export default function HomeScreen() {
           <Text style={styles.cardText}>Pay Bill</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/family')}>
           <View style={[styles.iconContainer, { backgroundColor: '#8b5cf6' }]}>
-            <Text style={styles.iconText}>🔔</Text>
+            <Text style={styles.iconText}>👨‍👩‍👧‍👦</Text>
           </View>
-          <Text style={styles.cardText}>BUZZ</Text>
+          <Text style={styles.cardText}>Family</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

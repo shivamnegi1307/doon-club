@@ -34,6 +34,25 @@ interface DetailedProfile {
   dob: string;
 }
 
+interface FamilyMember {
+  id: number;
+  membership_no: string;
+  dob: string;
+  role: string;
+  user_id: number;
+  name: string;
+  anniversary: string | null;
+  category: string | null;
+  relation: string;
+  email: string;
+  mobile: string;
+  gender: string | null;
+  city: string | null;
+  pin: string | null;
+  address: string | null;
+  status: number;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -43,6 +62,7 @@ interface AuthContextType {
   verifyDOB: (membershipNo: string, dob: string) => Promise<{ success: boolean; userId?: number; error?: string }>;
   resetPassword: (userId: number, password: string, passwordConfirmation: string) => Promise<{ success: boolean; error?: string }>;
   getUserProfile: () => Promise<{ success: boolean; data?: DetailedProfile; error?: string }>;
+  getFamilyData: () => Promise<{ success: boolean; data?: FamilyMember[]; error?: string }>;
   updateProfile: (profileData: {
     dob: string;
     name: string;
@@ -216,6 +236,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getFamilyData = async () => {
+    if (!userData?.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await fetch('https://doonclub.in/api/get-family-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status && result.data) {
+          return { success: true, data: result.data };
+        }
+        return { success: false, error: 'Invalid response format' };
+      } else {
+        return { success: false, error: 'Failed to fetch family data' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  };
+
   const logout = async () => {
     setIsAuthenticated(false);
     setUserData(null);
@@ -223,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, login, logout, verifyDOB, resetPassword, getUserProfile, updateProfile }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, login, logout, verifyDOB, resetPassword, getUserProfile, getFamilyData, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
